@@ -67,6 +67,43 @@ You MUST respond with valid JSON only. No text outside the JSON.
 }`;
 }
 
+function parseTeacherResponse(rawText, defaultXp) {
+  const fence = rawText.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const candidates = [];
+  if (fence) candidates.push(fence[1]);
+  const firstBrace = rawText.indexOf('{');
+  const lastBrace = rawText.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    candidates.push(rawText.slice(firstBrace, lastBrace + 1));
+  }
+  candidates.push(rawText);
+
+  for (const c of candidates) {
+    try {
+      const p = JSON.parse(c);
+      if (p && typeof p.message === 'string') {
+        return {
+          message: p.message,
+          drill: p.drill || null,
+          vocab: p.vocab || null,
+          xp: typeof p.xp === 'number' ? p.xp : defaultXp,
+        };
+      }
+    } catch (_) {}
+  }
+
+  const cleaned = rawText
+    .replace(/```(?:json)?[\s\S]*?```/g, '')
+    .replace(/```[\s\S]*$/g, '')
+    .trim();
+  return {
+    message: cleaned || rawText,
+    drill: null,
+    vocab: null,
+    xp: defaultXp,
+  };
+}
+
 async function sendTeacherMessage(language, level, weakAreas, conversationHistory, userMessage) {
   const systemPrompt = buildSystemPrompt(language, level, weakAreas);
 
@@ -75,34 +112,20 @@ async function sendTeacherMessage(language, level, weakAreas, conversationHistor
       role: msg.role,
       content: msg.content,
     })),
-    { role: 'user', content: userMessage },
+    {
+      role: 'user',
+      content: `${userMessage}\n\n[Reminder: respond with ONE valid JSON object only. No prose, no markdown fences. Schema: {"message": string, "drill": object|null, "vocab": string[]|null, "xp": number}]`,
+    },
   ];
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 1024,
+    max_tokens: 2048,
     system: systemPrompt,
     messages,
   });
 
-  const rawText = response.content[0].text.trim();
-
-  let parsed;
-  try {
-    // Handle potential markdown code blocks
-    const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, rawText];
-    parsed = JSON.parse(jsonMatch[1] || rawText);
-  } catch (e) {
-    // Fallback if Claude doesn't return valid JSON
-    parsed = {
-      message: rawText,
-      drill: null,
-      vocab: null,
-      xp: 10,
-    };
-  }
-
-  return parsed;
+  return parseTeacherResponse(response.content[0].text.trim(), 10);
 }
 
 async function generateWelcomeMessage(language, level, weakAreas) {
@@ -112,32 +135,17 @@ async function generateWelcomeMessage(language, level, weakAreas) {
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 512,
+    max_tokens: 1024,
     system: systemPrompt,
     messages: [
       {
         role: 'user',
-        content: `Start our ${language} lesson. My level is ${level} (${levelDesc}). Greet me warmly, tell me what we'll practice today, and give me the first prompt or question to get us started. Remember to respond in JSON format.`,
+        content: `Start our ${language} lesson. My level is ${level} (${levelDesc}). Greet me warmly, tell me what we'll practice today, and give me the first prompt or question to get us started.\n\n[Respond with ONE valid JSON object only. No prose, no markdown fences. Schema: {"message": string, "drill": object|null, "vocab": string[]|null, "xp": number}]`,
       },
     ],
   });
 
-  const rawText = response.content[0].text.trim();
-
-  let parsed;
-  try {
-    const jsonMatch = rawText.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, rawText];
-    parsed = JSON.parse(jsonMatch[1] || rawText);
-  } catch (e) {
-    parsed = {
-      message: rawText,
-      drill: null,
-      vocab: null,
-      xp: 0,
-    };
-  }
-
-  return parsed;
+  return parseTeacherResponse(response.content[0].text.trim(), 0);
 }
 
 module.exports = { sendTeacherMessage, generateWelcomeMessage };

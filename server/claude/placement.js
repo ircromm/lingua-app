@@ -76,7 +76,34 @@ Respond with ONLY valid JSON:
 }
 
 function evaluateMultipleChoice(question, userAnswer) {
-  const correct = userAnswer.trim().toLowerCase() === question.correct_answer.trim().toLowerCase();
+  const norm = (s) => String(s || '').trim().toLowerCase();
+  const stripLetter = (s) => norm(s).replace(/^([a-d])[\)\.\:\-]?\s*/, '');
+  const justLetter = (s) => {
+    const m = norm(s).match(/^([a-d])[\)\.\:\-]?\s*$/);
+    return m ? m[1] : null;
+  };
+
+  const ua = norm(userAnswer);
+  const ca = norm(question.correct_answer);
+
+  let correct = ua === ca;
+
+  if (!correct) {
+    correct = stripLetter(userAnswer) === stripLetter(question.correct_answer);
+  }
+  if (!correct) {
+    const userLetter = justLetter(userAnswer);
+    const correctLetter = justLetter(question.correct_answer) || (ca.match(/^([a-d])[\)\.\:\-]/) || [])[1];
+    if (userLetter && correctLetter) correct = userLetter === correctLetter;
+  }
+  if (!correct && Array.isArray(question.options)) {
+    const correctLetter = (ca.match(/^([a-d])[\)\.\:\-]/) || [])[1];
+    if (correctLetter) {
+      const correctOption = question.options.find((o) => norm(o).startsWith(correctLetter + ')') || norm(o).startsWith(correctLetter + '.'));
+      if (correctOption) correct = stripLetter(correctOption) === stripLetter(userAnswer);
+    }
+  }
+
   return {
     correct,
     partial: false,

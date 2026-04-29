@@ -86,6 +86,11 @@ router.post('/submit', async (req, res) => {
 
     if (question.question_type === 'multiple_choice' || question.question_type === 'fill_blank') {
       evaluation = evaluateMultipleChoice(question, answer);
+      if (!evaluation.feedback) {
+        evaluation.feedback = evaluation.correct
+          ? 'Correct! ✅'
+          : `Not quite. The correct answer was: ${question.correct_answer}`;
+      }
     } else {
       evaluation = await evaluateOpenAnswer(
         session.language,
