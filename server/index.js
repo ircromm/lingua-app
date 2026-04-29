@@ -40,16 +40,16 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 async function start() {
-  if (process.env.DATABASE_URL) {
-    await initSchema();
-  } else {
-    console.warn('DATABASE_URL not set — skipping schema init');
-  }
-
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   });
+
+  if (process.env.DATABASE_URL) {
+    initSchema().catch(err => console.error('Schema init error:', err.message));
+  } else {
+    console.warn('DATABASE_URL not set — skipping schema init');
+  }
 }
 
 start().catch(console.error);

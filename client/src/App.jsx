@@ -24,7 +24,8 @@ function App() {
   });
 
   const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem('lingua_dark') === 'true';
+    const saved = localStorage.getItem('lingua_dark');
+    return saved === null ? true : saved === 'true';
   });
 
   useEffect(() => {

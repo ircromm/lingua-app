@@ -32,7 +32,7 @@ export default function Login() {
     <div className="login-page">
       <div className="login-card">
         <div className="login-logo">
-          <span className="logo-icon">🌍</span>
+          <div className="logo-icon-wrap">🌍</div>
           <h1>LinguaApp</h1>
           <p>Learn languages with an AI professor</p>
         </div>
@@ -63,16 +63,16 @@ export default function Login() {
 
         <div className="login-features">
           <div className="feature">
-            <span>🤖</span>
+            <span className="feature-icon">🤖</span>
             <span>AI professor adapts to you</span>
           </div>
           <div className="feature">
-            <span>🎯</span>
+            <span className="feature-icon">🎯</span>
             <span>15 languages available</span>
           </div>
           <div className="feature">
-            <span>🎤</span>
-            <span>Speak & listen practice</span>
+            <span className="feature-icon">🎤</span>
+            <span>Speak &amp; listen practice</span>
           </div>
         </div>
       </div>
